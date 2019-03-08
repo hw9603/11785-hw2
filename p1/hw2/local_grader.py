@@ -20,7 +20,7 @@ def test_cnn_correctness_once(idx):
     rint = np.random.randint
     norm = np.linalg.norm
     in_c, out_c = rint(5,15), rint(5,15)
-    kernel, stride =  rint(1,10), rint(1,10)
+    kernel, stride = rint(1,10), rint(1,10)
     batch, width = rint(1,4), rint(20,300)
 
 
@@ -69,6 +69,7 @@ def test_cnn_correctness_once(idx):
     forward_res = y - y1.detach().numpy()
     forward_res_norm = abs(forward_res).max()
 
+    print(forward_res_norm)
 
     if forward_res_norm < 1e-12:
         scores_dict[0] =  1

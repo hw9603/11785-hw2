@@ -51,14 +51,22 @@ class Conv1D():
     def forward(self, x):
 
         ## Your codes here
-        self.batch, __ , self.width = x.shape
+        self.batch, __, self.width = x.shape
         assert __ == self.in_channel, 'Expected the inputs to have {} channels'.format(self.in_channel)
-        raise NotImplemented
+
+        self.out_width = (self.width - self.kernel_size) // self.stride + 1
+
+        self.y = np.zeros((self.batch, self.out_channel, self.out_width))
+        for i in range(self.out_channel):
+            for j in range(self.out_width):
+                self.y[:, i, j] = np.sum(x[:, :, j * self.stride:j * self.stride + self.kernel_size] * self.W[i, :, :], axis=(1, 2))
+        return self.y
 
 
     def backward(self, delta):
         
         ## Your codes here
+
         # self.db = ???
         # self.dW = ???
         # return dx
