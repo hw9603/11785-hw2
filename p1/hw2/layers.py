@@ -52,6 +52,7 @@ class Conv1D():
 
         ## Your codes here
         self.batch, __, self.width = x.shape
+        self.x = x
         assert __ == self.in_channel, 'Expected the inputs to have {} channels'.format(self.in_channel)
 
         self.out_width = (self.width - self.kernel_size) // self.stride + 1
@@ -64,15 +65,19 @@ class Conv1D():
 
 
     def backward(self, delta):
-        
         ## Your codes here
 
-        # self.db = ???
-        # self.dW = ???
-        # return dx
-        raise NotImplemented
+        # self.db = np.sum(delta, axis=(0, 2))
 
+        self.dx = np.zeros(self.x.shape)
 
+        for n in range(self.batch):
+            for f in range(self.out_channel):
+                for i in range(self.out_width):
+                    self.dx[n, :, i * self.stride:i * self.stride + self.kernel_size] += self.W[f, :, :] * delta[n, f, i]
+                    self.dW[f, :, :] += self.x[n, :, i * self.stride:i * self.stride + self.kernel_size] * delta[n, f, i]
+                    self.db[f] += delta[n, f, i]
+        return self.dx
 
 
 class Flatten():
