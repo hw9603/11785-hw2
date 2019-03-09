@@ -69,8 +69,6 @@ def test_cnn_correctness_once(idx):
     forward_res = y - y1.detach().numpy()
     forward_res_norm = abs(forward_res).max()
 
-    print(forward_res_norm)
-
     if forward_res_norm < 1e-12:
         scores_dict[0] =  1
     else:

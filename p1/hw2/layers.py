@@ -60,7 +60,7 @@ class Conv1D():
         self.y = np.zeros((self.batch, self.out_channel, self.out_width))
         for i in range(self.out_channel):
             for j in range(self.out_width):
-                self.y[:, i, j] = np.sum(x[:, :, j * self.stride:j * self.stride + self.kernel_size] * self.W[i, :, :], axis=(1, 2))
+                self.y[:, i, j] = np.sum(x[:, :, j * self.stride:j * self.stride + self.kernel_size] * self.W[i, :, :] + self.b[i], axis=(1, 2))
         return self.y
 
 
@@ -86,11 +86,12 @@ class Flatten():
 
     def forward(self, x):
         ## Your codes here
-        raise NotImplemented
+        self.batch, self.in_channel, self.width = x.shape
+        return x.reshape(self.batch, self.in_channel * self.width)
 
     def backward(self, x):
         # Your codes here
-        raise NotImplemented
+        return x.reshape((self.batch, self.in_channel, self.width))
 
 
 
