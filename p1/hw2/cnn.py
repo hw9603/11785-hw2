@@ -10,9 +10,9 @@ class CNN_B():
 
     def init_weights(self, weights):
         # Load the weights for your CNN from the MLP Weights given
-        w = [(8, 8, 24), (16, 1, 8), (4, 1, 16)]
-        for i, weight in enumerate(weights):
-            self.layers[i * 2].W = weight.T.reshape(w[i]).transpose(0, 2, 1)
+        self.layers[0].W = weights[0].T.reshape((8, 8, 24)).transpose(0, 2, 1)
+        self.layers[2].W = weights[1].T.reshape((16, 1, 8)).transpose(0, 2, 1)
+        self.layers[4].W = weights[2].T.reshape((4, 1, 16)).transpose(0, 2, 1)
 
     def forward(self, x):
         # You do not need to modify this method
@@ -40,11 +40,9 @@ class CNN_C():
 
     def init_weights(self, weights):
         # Load the weights for your CNN from the MLP Weights given
-        w = [(2, 2, 24), (8, 2, 2), (4, 2, 8)]
-        for i, weight in enumerate(weights):
-            out_channel, kernel, in_channel = w[i]
-            weight = weight[:in_channel * kernel, :out_channel]
-            self.layers[i * 2].W = weight.T.reshape(w[i]).transpose(0, 2, 1)
+        self.layers[0].W = weights[0][:48, :2].T.reshape((2, 2, 24)).transpose(0, 2, 1)
+        self.layers[2].W = weights[1][:4, :8].T.reshape((8, 2, 2)).transpose(0, 2, 1)
+        self.layers[4].W = weights[2][:16, :4].T.reshape((4, 2, 8)).transpose(0, 2, 1)
 
     def forward(self, x):
         # You do not need to modify this method

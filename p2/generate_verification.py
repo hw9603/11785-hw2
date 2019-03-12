@@ -51,6 +51,7 @@ def parse_verification_data(datadir, order_file):
     print('{}:{}'.format('#Verification images pair', len(img_list1)))
     return img_list1, img_list2
 
+
 def validate_verification(net, test_loader, device, output_file):
     net.eval()
     net.to(device)
@@ -63,21 +64,21 @@ def validate_verification(net, test_loader, device, output_file):
         feature2, _ = net.forward(feats2)
         distance = nn.CosineSimilarity(dim=1, eps=1e-6)
         output = distance(feature1, feature2)
-        for score in output.cpu().numpy():
-            wstring = name1 + " " + name2 + " " + score + "\n"
+        for score in output.cpu().detach().numpy():
+            wstring = name1[0] + " " + name2[0] + " " + str(score) + "\n"
             fwrite.write(wstring)
     fwrite.close()
     print("Verification file generated!")
 
 
 def main():
-    checkpoints_path = "mnetv2_checkpoints2/"
     net = MNetV2.MNetV2()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
 
     checkpoints_path = "verification_checkpoints/"
+    net.classifier = nn.Linear(1280, 4300, bias=False)
 
     net.load_state_dict(torch.load(checkpoints_path + "model_epoch0"))
 
@@ -88,3 +89,6 @@ def main():
     val_veri_loader = DataLoader(val_veri_set, shuffle=False)
     validate_verification(net, val_veri_loader, device, "val_verification.txt")
 
+
+if __name__ == "__main__":
+    main()
