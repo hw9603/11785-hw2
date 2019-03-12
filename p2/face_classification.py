@@ -154,7 +154,7 @@ def classify_predict(net, test_loader, output_file, device):
 
 
 def main():
-    lr = 1e-4
+    lr = 1e-5
     weight_decay = 1e-4
     batch_size = 128
     epochs = 5
@@ -167,7 +167,7 @@ def main():
     # net = MNetV1.MNetV1()
     net = MNetV2.MNetV2()
     # net = ResNet.ResNet50()
-    net.load_state_dict(torch.load(checkpoints_path + "model_epoch2"))
+    net.load_state_dict(torch.load(checkpoints_path + "model_epoch6"))
     criterion = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=weight_decay)
     # optimizer.load_state_dict(torch.load(checkpoints_path + "optimizer_epoch1").to(device))
@@ -192,9 +192,9 @@ def main():
     for epoch in range(epochs):
         train(net, optimizer, scheduler, criterion, train_loader, val_loader, device, epoch, task='Classification')
         if epoch % 1 == 0 or epoch == epochs - 1:
-            model_path = checkpoints_path + "model_epoch" + str(epoch+5)
-            optimizer_path = checkpoints_path + "optimizer_epoch" + str(epoch+5)
-            scheduler_path = checkpoints_path + "scheduler_epoch" + str(epoch+5)
+            model_path = checkpoints_path + "model_epoch" + str(epoch+7)
+            optimizer_path = checkpoints_path + "optimizer_epoch" + str(epoch+7)
+            scheduler_path = checkpoints_path + "scheduler_epoch" + str(epoch+7)
             torch.save(net.state_dict(), model_path)
             torch.save(optimizer.state_dict(), optimizer_path)
             torch.save(scheduler.state_dict(), scheduler_path)
@@ -205,7 +205,7 @@ def main():
             img_list = parse_test_classification_data(test_classification_data_path, test_classification_order_file)
             testset = ImageDataset(img_list, is_test=True)
             test_loader = DataLoader(testset, shuffle=False)
-            classify_predict(net, test_loader, "submission_classification_mnetv2_" + str(epoch+5) + ".csv", device)
+            classify_predict(net, test_loader, "submission_classification_mnetv2_" + str(epoch+7) + ".csv", device)
 
     # print("Load test data...")
     # test_classification_data_path = "../hw2p2_check/test_classification/medium"

@@ -10,11 +10,11 @@ def get_auc(y_true, y_score):
 if __name__ == '__main__':
     args = sys.argv[1:]
     if len(args) < 2:
-        print "python score.py <score_csv> <label_csv>"
+        print("python score.py <score_csv> <label_csv>")
         exit()
     score_csv = args[0]
     label_csv = args[1]
     y_score = pd.read_csv(score_csv).score.values
     y_true = pd.read_csv(label_csv).score.values
     auc = get_auc(y_true, y_score)
-    print "AUC: ", auc
+    print("AUC: ", auc)

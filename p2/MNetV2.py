@@ -94,10 +94,10 @@ class MNetV2(nn.Module):
 
     def forward(self, x):
         x = self.features(x)
-        x = x.mean(3).mean(2)
+        feat = x.mean(3).mean(2)
         # x = self.avgpool(x)
-        x = self.classifier(x)
-        return x
+        label = self.classifier(feat)
+        return feat, label
 
     def _initialize_weights(self):
         for m in self.modules():
