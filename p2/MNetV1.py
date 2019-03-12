@@ -8,6 +8,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
 
+
 class MNetV1(nn.Module):
     def __init__(self):
         super(MNetV1, self).__init__()

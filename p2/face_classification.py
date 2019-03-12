@@ -8,9 +8,11 @@ import torchvision
 import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+import torch.optim.lr_scheduler as lr_scheduler
 from torch.autograd import Variable
 import MNetV1
 import MNetV2
+import ResNet
 
 
 class ImageDataset(Dataset):
@@ -45,16 +47,16 @@ def parse_data(datadir):
             if filename.endswith('.jpg'):
                 filei = os.path.join(root, filename)
                 img_list.append(filei)
-                ID_list.append(root.split('/')[-1])
+                ID_list.append(int(root.split('/')[-1]))
 
     # construct a dictionary, where key and value correspond to ID and target
-    uniqueID_list = list(set(ID_list))
-    class_n = len(uniqueID_list)
-    target_dict = dict(zip(uniqueID_list, range(class_n)))
-    label_list = [target_dict[ID_key] for ID_key in ID_list]
-
-    print('{}\t\t{}\n{}\t\t{}'.format('#Images', '#Labels', len(img_list), len(set(label_list))))
-    return img_list, label_list, class_n
+    # uniqueID_list = list(set(ID_list))
+    # class_n = len(uniqueID_list)
+    # target_dict = dict(zip(uniqueID_list, range(class_n)))
+    # label_list = [target_dict[ID_key] for ID_key in ID_list]
+    # print(type(label_list))
+    # print(type(ID_list))
+    return img_list, ID_list
 
 
 def parse_test_classification_data(datadir, order_file):
@@ -64,10 +66,17 @@ def parse_test_classification_data(datadir, order_file):
             filei = os.path.join(datadir, line.replace('\n', ''))
             img_list.append(filei)
     print('{}:{}'.format('#Test images', len(img_list)))
+
+    # for root, directories, filenames in os.walk(datadir):
+    #     for filename in filenames:
+    #         if filename.endswith('.jpg'):
+    #             filei = os.path.join(root, filename)
+    #             img_list.append(filei)
+    # print(img_list)
     return img_list
 
 
-def train(net, optimizer, criterion, train_loader, val_loader, device, epoch, task='Classification'):
+def train(net, optimizer, scheduler, criterion, train_loader, val_loader, device, epoch, task='Classification'):
     net.train()
     net.to(device)
 
@@ -94,6 +103,7 @@ def train(net, optimizer, criterion, train_loader, val_loader, device, epoch, ta
         val_loss, val_acc = test_classify(net, criterion, val_loader, device)
         print('Train Loss: {:.4f}\tTrain Accuracy: {:.4f}\tVal Loss: {:.4f}\tVal Accuracy: {:.4f}'.
               format(train_loss, train_acc, val_loss, val_acc))
+        scheduler.step(val_loss)
 
 
 def test_classify(net, criterion, test_loader, device):
@@ -105,7 +115,7 @@ def test_classify(net, criterion, test_loader, device):
 
     for batch_num, (feats, labels) in enumerate(test_loader):
         feats, labels = feats.to(device), labels.to(device)
-        outputs = net(feats)
+        outputs = net.forward(feats)
 
         _, pred_labels = torch.max(F.softmax(outputs, dim=1), 1)
         pred_labels = pred_labels.view(-1)
@@ -136,7 +146,6 @@ def classify_predict(net, test_loader, output_file, device):
         _, pred_labels = torch.max(outputs.data, 1)
         pred_labels = pred_labels.view(-1)
         for label in pred_labels.cpu().numpy():
-            print(id)
             wstring = str(id) + "," + str(label) + "\n"
             id += 1
             fwrite.write(wstring)
@@ -145,49 +154,66 @@ def classify_predict(net, test_loader, output_file, device):
 
 
 def main():
-    lr = 1e-3
+    lr = 1e-4
     weight_decay = 1e-4
     batch_size = 128
-    epochs = 1
+    epochs = 5
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(device)
 
+    checkpoints_path = "mnetv2_checkpoints2/"
+
+    # net = MNetV1.MNetV1()
+    net = MNetV2.MNetV2()
+    # net = ResNet.ResNet50()
+    net.load_state_dict(torch.load(checkpoints_path + "model_epoch2"))
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=weight_decay)
+    # optimizer.load_state_dict(torch.load(checkpoints_path + "optimizer_epoch1").to(device))
+    scheduler = lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+
     print("Load training data...")
     train_data_path = "../hw2p2_check/train_data/medium"
-    img_list, label_list, class_n = parse_data(train_data_path)
+
+    img_list, label_list = parse_data(train_data_path)
     trainset = ImageDataset(img_list, label_list)
-    train_data_item, train_data_label = trainset.__getitem__(0)
-    # print('data item shape: {}\t data item label: {}'.format(train_data_item.shape, train_data_label))
+    for i in range(5):
+        print(img_list[i], label_list[i])
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=False)
 
     print("Load validation data...")
     val_data_path = "../hw2p2_check/validation_classification/medium"
-    img_list, label_list, class_n = parse_data(val_data_path)
+    img_list, label_list = parse_data(val_data_path)
     valset = ImageDataset(img_list, label_list)
     val_loader = DataLoader(valset, batch_size=batch_size, shuffle=True, num_workers=8, drop_last=False)
 
-    net = MNetV1.MNetV1()
-    net.load_state_dict(torch.load("mnetv1_checkpoints/mnetv1_model_epoch40"))
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=weight_decay)
-
     # print("Begin training...")
     for epoch in range(epochs):
-        train(net, optimizer, criterion, train_loader, val_loader, device, epoch, task='Classification')
-        if epoch % 5 == 1 or epoch == epochs - 1:
-            path = "mnetv1model_epoch" + str(epoch)
-            torch.save(net.state_dict(), path)
-            torch.save(optimizer.state_dict(), )
+        train(net, optimizer, scheduler, criterion, train_loader, val_loader, device, epoch, task='Classification')
+        if epoch % 1 == 0 or epoch == epochs - 1:
+            model_path = checkpoints_path + "model_epoch" + str(epoch+5)
+            optimizer_path = checkpoints_path + "optimizer_epoch" + str(epoch+5)
+            scheduler_path = checkpoints_path + "scheduler_epoch" + str(epoch+5)
+            torch.save(net.state_dict(), model_path)
+            torch.save(optimizer.state_dict(), optimizer_path)
+            torch.save(scheduler.state_dict(), scheduler_path)
 
-    test_classify(net, criterion, val_loader, device)
-    print("Load test data...")
-    test_classification_data_path = "../hw2p2_check/test_classification/medium"
-    test_classification_order_file = "../hw2p2_check/test_order_classification.txt"
-    img_list = parse_test_classification_data(test_classification_data_path, test_classification_order_file)
-    testset = ImageDataset(img_list, is_test=True)
-    test_loader = DataLoader(testset)
-    classify_predict(net, test_loader, "submission_classification.csv", device)
+            print("Load test data...")
+            test_classification_data_path = "../hw2p2_check/test_classification/medium"
+            test_classification_order_file = "../hw2p2_check/test_order_classification.txt"
+            img_list = parse_test_classification_data(test_classification_data_path, test_classification_order_file)
+            testset = ImageDataset(img_list, is_test=True)
+            test_loader = DataLoader(testset, shuffle=False)
+            classify_predict(net, test_loader, "submission_classification_mnetv2_" + str(epoch+5) + ".csv", device)
+
+    # print("Load test data...")
+    # test_classification_data_path = "../hw2p2_check/test_classification/medium"
+    # test_classification_order_file = "../hw2p2_check/test_order_classification.txt"
+    # img_list = parse_test_classification_data(test_classification_data_path, test_classification_order_file)
+    # testset = ImageDataset(img_list, is_test=True)
+    # test_loader = DataLoader(testset, shuffle=False)
+    # classify_predict(net, test_loader, "submission_classification_mnetv2.csv", device)
 
 
 if __name__ == "__main__":
